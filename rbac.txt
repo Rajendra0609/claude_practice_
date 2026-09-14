@@ -115,3 +115,19 @@ EOF
    47  ``
    48  kubectl auth can-i get pods   --as=system:serviceaccount:rbac-lab:pod-reader-sa   -n rbac-lab
    49  kubectl auth can-i delete pods   --as=system:serviceaccount:rbac-lab:pod-reader-sa   -n rbac-lab
+kubectl create ns diagnose-lab
+   58  kubectl create serviceaccount app-sa -n diagnose-lab 
+   59  kubectl create role pod-reader --verb=get,list,watch --resource=pods -n diagnose-lab 
+   60  kubectl describe role pod-reader -n diagnose-lab 
+   61  kubectl create rolebinding app-sa-pod-reader --role=pod-reader --serviceaccount=diagnose-lab:app-sa -n diagnose-lab 
+   62  kubectl describe rolebinding app-sa-pod-reader -n diagnose-lab
+   63  kubectl auth can-i list pods --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   64  kubectl get secrets --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   65  kubectl auth can-i list secrets   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
+   66  kubectl auth can-i --list --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   67  kubectl get rolebinding -n diagnose-lab
+   68  kubectl get rolebinding app-sa-pod-reader -n diagnose-lab -o yaml
+   69  kubectl get role pod-reader -n diagnose-lab -o yaml
+   70  kubectl create role secret-reader   --verb=get,list   --resource=secrets   -n diagnose-lab
+   71  kubectl create rolebinding app-sa-secret-reader   --role=secret-reader   --serviceaccount=diagnose-lab:app-sa   -n diagnose-lab
+   72  kubectl auth can-i list secrets   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
