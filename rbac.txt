@@ -1,0 +1,117 @@
+kubectl get nodes -o wide
+    3  kubectl create ns rbac-lab
+    4  kubectl get ns 
+    5  kubectl create serviceaccount pod-reader-sa -n rbac-lab
+    6  kubectl get sa -n rbac-lab 
+    7  cat > pod-reader-role.yaml <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader-role
+  namespace: rbac-lab
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+EOF
+
+    8  kubectl apply -f pod-reader-role.yaml 
+    9  kubectl get role -n rbac-lab
+   10  kubectl describe role pod-reader-role -n rbac-lab
+   11  kubectl create rolebinding pod-reader-binding --role=pod-reader-role --serviceaccount=rbac-lab:pod-reader-sa -n rbac-lab
+   12  kubectl get rolebinding -n rbac-lab 
+   13  kubectl describe rolebinding pod-reader-binding -n rbac-lab 
+   14  kubectl auth can-i get pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   15  kubectl auth can-i list pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   16  kubectl auth can-i watch pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   17  kubectl auth can-i delete pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   18  kubectl auth can-i create pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   19  kubectl auth can-i get secrets pods --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   20  kubectl auth can-i get secrets --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   21  kubectl auth can-i list pods --as=system:serviceaccount:rac-lab:pod-reader-sa -n default
+   22  kubectl auth can-i --list --as=system:servcieaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   23  cat > sa-pod.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sa-test-pod
+  namespace: rbac-lab
+spec:
+  serviceAccountName: pod-reader-sa
+  containers:
+  - name: web
+    image: nginx:alpine
+EOF
+
+   24  kubectl aplly -f sa-pod.yaml 
+   25  kubectl apply -f sa-pod.yaml 
+   26  kubectl get pod -n rbac-lab 
+   27  kubectl get pod sa-test-pod -n rbac-lab -o jsonpath='{.spec.serviceAccount}'
+   28  cat > secure-pod.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+  namespace: rbac-lab
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "echo 'Secure pod started'; sleep 3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+EOF
+
+   29  kubectl apply -f secure-pod.yaml 
+   30  cat > write-test-pod.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: write-test-pod
+  namespace: rbac-lab
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: app
+    image: busybox:1.36
+    command:
+    - sh
+    - -c
+    - echo "testing" > /test.txt && sleep 3600
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+EOF
+
+   31  kubectl apply -f write-test-pod.yaml
+   32  kubectl get pod -n rbac-lab 
+   33  kubectl logs write-test-pod -n rbac-lab
+   34  kubectl delete pod write-test-pod -n rbac-lab
+   35  sed -i '/readOnlyRootFilesystem/d' write-test-pod.yaml
+   36  kubectl apply -f write-test-pod.yaml
+   37  kubectl get pod -n rbac-lab 
+   38  sed -i '/readOnlyRootFilesystem/d' write-test-pod.yaml
+   39  kubectl apply -f write-test-pod.yaml
+   40  kubectl get pod -n rbac-lab 
+   41  clear
+   42  kubectl get secrets --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   43  kubectl run forbidden-pod --image=nginx:alpine --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+   44  kubectl get all -n rbac-lab
+   45  kubectl get role,rolebinding,serviceaccount -n rbac-lab
+   46  kubectl describe role pod-reader-role -n rbac-lab
+   47  ``
+   48  kubectl auth can-i get pods   --as=system:serviceaccount:rbac-lab:pod-reader-sa   -n rbac-lab
+   49  kubectl auth can-i delete pods   --as=system:serviceaccount:rbac-lab:pod-reader-sa   -n rbac-lab
