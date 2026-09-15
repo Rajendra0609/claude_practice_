@@ -131,3 +131,53 @@ kubectl create ns diagnose-lab
    70  kubectl create role secret-reader   --verb=get,list   --resource=secrets   -n diagnose-lab
    71  kubectl create rolebinding app-sa-secret-reader   --role=secret-reader   --serviceaccount=diagnose-lab:app-sa   -n diagnose-lab
    72  kubectl auth can-i list secrets   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
+kubectl create ns diagnose-lab
+   58  kubectl create serviceaccount app-sa -n diagnose-lab 
+   59  kubectl create role pod-reader --verb=get,list,watch --resource=pods -n diagnose-lab 
+   60  kubectl describe role pod-reader -n diagnose-lab 
+   61  kubectl create rolebinding app-sa-pod-reader --role=pod-reader --serviceaccount=diagnose-lab:app-sa -n diagnose-lab 
+   62  kubectl describe rolebinding app-sa-pod-reader -n diagnose-lab
+   63  kubectl auth can-i list pods --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   64  kubectl get secrets --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   65  kubectl auth can-i list secrets   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
+   66  kubectl auth can-i --list --as=system:serviceaccount:diagnose-lab:app-sa -n diagnose-lab
+   67  kubectl get rolebinding -n diagnose-lab
+   68  kubectl get rolebinding app-sa-pod-reader -n diagnose-lab -o yaml
+   69  kubectl get role pod-reader -n diagnose-lab -o yaml
+   70  kubectl create role secret-reader   --verb=get,list   --resource=secrets   -n diagnose-lab
+   71  kubectl create rolebinding app-sa-secret-reader   --role=secret-reader   --serviceaccount=diagnose-lab:app-sa   -n diagnose-lab
+   72  kubectl auth can-i list secrets   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
+   73  history
+   74  clear
+   75  kubectl create namespace other-lab
+   76  kubectl create clusterrole deployment-reader   --verb=get,list,watch   --resource=deployments.apps
+   77  kubectl describe clusterrole deployment-reader
+   78  kubectl create rolebinding app-sa-deployment-reader --clusterrole=deployment-reader --serviceaccount=diagnose-lab:app-sa -n diagnose-lab
+   79  kubectl auth can-i list deployments.apps   --as=system:serviceaccount:diagnose-lab:app-sa   -n diagnose-lab
+   80  kubectl auth can-i list deployments.apps   --as=system:serviceaccount:diagnose-lab:app-sa   -n other-lab
+   81  kubectl auth can-i list deployments.apps   --as=system:serviceaccount:diagnose-lab:app-sa   -n default
+   82  kubectl get clusterrolebinding | grep app-sa
+   83  cat > no-token-pod.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-token-pod
+  namespace: diagnose-lab
+spec:
+  serviceAccountName: app-sa
+  automountServiceAccountToken: false
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "echo 'Application started'; sleep 3600"]
+EOF
+
+   84  kubectl apply -f no-token-pod.yaml 
+   85  kubectl wait   --for=condition=Ready   pod/no-token-pod   -n diagnose-lab   --timeout=90s
+   86  kubectl get pod no-token-pod -n diagnose-lab
+   87  kubectl get pod no-token-pod   -n diagnose-lab   -o jsonpath='{.spec.automountServiceAccountToken}{
+   88  kubectl get pod no-token-pod   -n diagnose-lab   -o jsonpath='{.spec.automountServiceAccountToken}'
+   89  kubectl get pod no-token-pod   -n diagnose-lab   -o jsonpath='{.spec.serviceAccountName}{"\n"}'
+   90  kubectl exec no-token-pod -n diagnose-lab --   ls /var/run/secrets/kubernetes.io/serviceaccount
+   91  kubectl exec no-token-pod -n diagnose-lab --   sh -c 'if [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then echo "TOKEN EXISTS"; else echo "TOKEN ABSENT"; fi'
+   92  kubectl describe pod no-token-pod -n diagnose-lab
